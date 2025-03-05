@@ -14,7 +14,7 @@ class Game : GameWindow
 
     private Vector2 center = new Vector2(-0.5f, 0.0f); // Fraktál középpontja
     private float zoom = 1.0f;                        // Kezdeti nagyítás
-    private int maxIterations = 100;                  // Iterációk száma
+    private int maxIterations = 500;                  // Iterációk száma
 
     public Game(NativeWindowSettings settings) : base(GameWindowSettings.Default, settings) { }
 
@@ -109,12 +109,16 @@ class Game : GameWindow
     {
         var input = KeyboardState;
 
+        // Mozgás sebességének dinamikus beállítása
+        float baseMoveSpeed = 0.001f; // Alap mozgási sebesség
+        float moveSpeed = baseMoveSpeed / (1/zoom); // Sebesség négyzetesen csökken a zoom hatására
+
         // Explicit hivatkozás a Keys típusra
         if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Escape)) Close();
-        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.W)) center.Y += 0.01f / zoom;
-        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.S)) center.Y -= 0.01f / zoom;
-        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.A)) center.X -= 0.01f / zoom;
-        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.D)) center.X += 0.01f / zoom;
+        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.W)) center.Y += moveSpeed;
+        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.S)) center.Y -= moveSpeed;
+        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.A)) center.X -= moveSpeed;
+        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.D)) center.X += moveSpeed;
         if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Q)) zoom *= 1.02f;
         if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.E)) zoom /= 1.02f;
         if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Up)) maxIterations += 10;
