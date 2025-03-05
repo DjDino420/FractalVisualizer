@@ -1,16 +1,21 @@
-namespace fractal;
-using MandelbrotZoom;
-static class Program
+using OpenTK.Mathematics;
+using OpenTK.Windowing.Common;
+using OpenTK.Windowing.Desktop;
+
+class Program
 {
-    /// <summary>
-    ///  The main entry point for the application.
-    /// </summary>
-    [STAThread]
     static void Main()
     {
-        // To customize application configuration such as set high DPI settings or default font,
-        // see https://aka.ms/applicationconfiguration.
-        ApplicationConfiguration.Initialize();
-        Application.Run(new Form1());
+        var nativeWindowSettings = new NativeWindowSettings()
+        {
+            Size = new Vector2i(800, 600),
+            Title = "Mandelbrot Haladó",
+            API = ContextAPI.OpenGL,
+            APIVersion = new Version(4, 5),
+            WindowState = WindowState.Normal
+        };
+
+        using var window = new Game(nativeWindowSettings);
+        window.Run();
     }
 }
