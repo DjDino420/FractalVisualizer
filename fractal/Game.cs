@@ -4,17 +4,18 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
-using OpenTK.Windowing.GraphicsLibraryFramework; // Explicit using
+using OpenTK.Windowing.GraphicsLibraryFramework;
 
 class Game : GameWindow
 {
     private int shaderProgram;
     private int vao;
-    private int resolutionLocation, centerLocation, zoomLocation, maxIterationsLocation;
+    private int resolutionLocation, centerLocation, zoomLocation, maxIterationsLocation, progressLocation;
 
-    private Vector2 center = new Vector2(-0.5f, 0.0f); // Fraktál középpontja
-    private float zoom = 1.0f;                        // Kezdeti nagyítás
-    private int maxIterations = 500;                  // Iterációk száma
+    private Vector2 center = new Vector2(-0.5f, 0.0f);
+    private float zoom = 1.0f;
+    private int maxIterations = 500;
+    private int progress = 100; // Progressively increase iteration count
 
     public Game(NativeWindowSettings settings) : base(GameWindowSettings.Default, settings) { }
 
@@ -23,11 +24,11 @@ class Game : GameWindow
         base.OnLoad();
         GL.ClearColor(Color4.Black);
 
-        // Shader fájlok útvonala
+        // Shader file paths
         string vertexShaderPath = Path.Combine("shaders", "mandelbrot.vert");
         string fragmentShaderPath = Path.Combine("shaders", "mandelbrot.frag");
 
-        // Shaderek betöltése fájlból
+        // Load and compile shaders
         shaderProgram = CreateShader(
             File.ReadAllText(vertexShaderPath),
             File.ReadAllText(fragmentShaderPath)
@@ -35,16 +36,17 @@ class Game : GameWindow
 
         GL.UseProgram(shaderProgram);
 
-        // Uniform változók lokációjának lekérése
+        // Get uniform locations
         resolutionLocation = GL.GetUniformLocation(shaderProgram, "resolution");
         centerLocation = GL.GetUniformLocation(shaderProgram, "center");
         zoomLocation = GL.GetUniformLocation(shaderProgram, "zoom");
         maxIterationsLocation = GL.GetUniformLocation(shaderProgram, "maxIterations");
+        progressLocation = GL.GetUniformLocation(shaderProgram, "progress");
 
-        // Vertex array létrehozása (fullscreen quad)
+        // Create a fullscreen quad
         float[] vertices = {
-            -1f, -1f, 1f, -1f, -1f, 1f,
-            -1f, 1f, 1f, -1f, 1f, 1f
+            -1f, -1f,  1f, -1f, -1f, 1f,
+            -1f, 1f,   1f, -1f,  1f, 1f
         };
 
         vao = GL.GenVertexArray();
@@ -92,12 +94,14 @@ class Game : GameWindow
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         GL.Clear(ClearBufferMask.ColorBufferBit);
-
         GL.UseProgram(shaderProgram);
+
+        // Pass uniforms
         GL.Uniform2(resolutionLocation, new Vector2(Size.X, Size.Y));
         GL.Uniform2(centerLocation, center);
         GL.Uniform1(zoomLocation, zoom);
         GL.Uniform1(maxIterationsLocation, maxIterations);
+        GL.Uniform1(progressLocation, progress);
 
         GL.BindVertexArray(vao);
         GL.DrawArrays(PrimitiveType.Triangles, 0, 6);
@@ -108,21 +112,39 @@ class Game : GameWindow
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         var input = KeyboardState;
+        double baseMoveSpeed = 0.001;
+        double moveSpeed = baseMoveSpeed / zoom;
 
-        // Mozgás sebességének dinamikus beállítása
-        float baseMoveSpeed = 0.001f; // Alap mozgási sebesség
-        float moveSpeed = baseMoveSpeed / (1/zoom); // Sebesség négyzetesen csökken a zoom hatására
-
-        // Explicit hivatkozás a Keys típusra
         if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Escape)) Close();
-        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.W)) center.Y += moveSpeed;
-        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.S)) center.Y -= moveSpeed;
-        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.A)) center.X -= moveSpeed;
-        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.D)) center.X += moveSpeed;
-        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Q)) zoom *= 1.02f;
-        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.E)) zoom /= 1.02f;
+        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.W)) center.Y += (float)moveSpeed;
+        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.S)) center.Y -= (float)moveSpeed;
+        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.A)) center.X -= (float)moveSpeed;
+        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.D)) center.X += (float)moveSpeed;
+
+        // Zooming
+        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Q))
+        {
+            zoom *= (float)1.02;
+            maxIterations = (int)(maxIterations * 1.02);
+        }
+        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.E))
+        {
+            zoom /= (float)1.02;
+            maxIterations = Math.Max(100, (int)(maxIterations / 1.02));
+        }
+
+        // Iteration control
         if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Up)) maxIterations += 10;
-        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Down)) maxIterations = Math.Max(10, maxIterations - 10);
+        if (input.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Down)) maxIterations = Math.Max(100, maxIterations - 10);
+
+        // Progressive rendering
+        if (progress < maxIterations)
+        {
+            progress += 10;
+            progress = Math.Min(progress, maxIterations);
+            GL.Uniform1(progressLocation, progress);
+        }
+
     }
 
     protected override void OnResize(ResizeEventArgs e)

@@ -11,7 +11,7 @@ class Program
             Size = new Vector2i(800, 600),
             Title = "Mandelbrot Haladó",
             API = ContextAPI.OpenGL,
-            APIVersion = new Version(4, 5),
+            APIVersion = new Version(3, 3),
             WindowState = WindowState.Normal
         };
 
